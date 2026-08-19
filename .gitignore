@@ -1,0 +1,15 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Data & Logs
+data/collected/
+data/processed/
+data/*.json
+*.log
+
+# OS / IDE
+.vscode/
+.DS_Store
