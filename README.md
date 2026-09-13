@@ -43,41 +43,22 @@ real-time through an SDN controller.
                     └───────────┘
 ```
 
-## Quick Start
+## Quick Start (One-Click Demo)
 
-### 1. Start the SDN Controller
+We have fully automated the entire orchestration (Controller, Policy Engine, Mininet, and Traffic Generation) into a single executable script.
+
 ```bash
-./venv/bin/python run_controller.py
+chmod +x demo.sh
+./demo.sh
 ```
 
-### 2. Start the Mininet Topology (in another terminal)
-```bash
-sudo python3 run_topology.py
-```
-
-### 3. Start the Policy Engine (in another terminal)
-```bash
-./venv/bin/python run_policy_engine.py
-```
-
-### 4. Generate Traffic (from the Mininet CLI)
-```
-# Normal traffic from employee h1
-mininet> h1 python3 src/traffic/normal_traffic.py 10.0.0.1 10.0.0.3 60 &
-
-# Attack traffic from h4
-mininet> h4 python3 src/traffic/anomalous_traffic.py 10.0.0.4 10.0.0.3 60 &
-```
-
-## REST API
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/trust/scores` | GET | View all trust scores |
-| `/trust/scores` | POST | Update a host's trust score |
-| `/trust/flows` | GET | View flow statistics |
-| `/trust/actions` | GET | View enforcement actions |
-| `/trust/status` | GET | Full system status |
+**What the script does automatically:**
+1. Boots the SDN Controller (Ryu) in the background.
+2. Boots the Trust Policy Engine in the background.
+3. Starts the Mininet Topology (requires sudo password).
+4. Automatically generates normal employee traffic and randomized multi-vector attack traffic (LDoS, Port Scans, etc.) for 60 seconds.
+5. Cleans up all background processes safely.
+6. Generates two visual proof graphs in the `output/` directory and a Terminal Scorecard.
 
 ## Project Structure
 
@@ -85,16 +66,14 @@ mininet> h4 python3 src/traffic/anomalous_traffic.py 10.0.0.4 10.0.0.3 60 &
 zero_trust_sdn/
 ├── src/
 │   ├── topology/          # Mininet network topology
-│   ├── traffic/           # Normal + anomalous traffic generators
+│   ├── traffic/           # Multithreaded traffic generators (Normal & Attack)
 │   ├── sdn_controller/    # Ryu OpenFlow controller
-│   ├── trust_engine/      # Feature extraction + ML scoring + policy
-│   ├── explainability/    # SHAP explainer (Phase 4)
-│   └── dashboard/         # Streamlit dashboard (Phase 5)
-├── data/                  # Collected and processed data
-├── models/                # Saved ML models
-├── run_topology.py        # Launch Mininet
-├── run_controller.py      # Launch Ryu controller
-├── run_policy_engine.py   # Launch trust evaluation
+│   └── trust_engine/      # Feature extraction + ML scoring + policy enforcement
+├── data/                  # Timestamped packet logs and decision states
+├── output/                # Generated visualizations of the attack and trust scores
+├── demo.sh                # Main automated orchestration script
+├── plot_results.py        # Graph generator script
+├── instruction.txt        # Demo workflow guide for presentation
 └── requirements.txt
 ```
 
