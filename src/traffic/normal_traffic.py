@@ -22,26 +22,26 @@ NORMAL_PROFILES = {
     'web_browsing': {
         'dst_port': 80, 'protocol': 'tcp',
         'packet_size_range': (64, 1500),
-        'interval_range': (0.5, 5.0),
-        'burst_size_range': (1, 5),
+        'interval_range': (2.0, 10.0),
+        'burst_size_range': (1, 2),
     },
     'dns_query': {
         'dst_port': 53, 'protocol': 'udp',
         'packet_size_range': (40, 128),
-        'interval_range': (2.0, 10.0),
-        'burst_size_range': (1, 2),
+        'interval_range': (5.0, 15.0),
+        'burst_size_range': (1, 1),
     },
     'ssh_session': {
         'dst_port': 22, 'protocol': 'tcp',
         'packet_size_range': (64, 512),
-        'interval_range': (0.1, 3.0),
-        'burst_size_range': (1, 10),
+        'interval_range': (1.0, 5.0),
+        'burst_size_range': (1, 3),
     },
     'https_browsing': {
         'dst_port': 443, 'protocol': 'tcp',
         'packet_size_range': (64, 1500),
-        'interval_range': (0.5, 5.0),
-        'burst_size_range': (1, 8),
+        'interval_range': (2.0, 8.0),
+        'burst_size_range': (1, 4),
     },
 }
 
@@ -151,22 +151,23 @@ class NormalTrafficGenerator:
             json.dump(self.traffic_log, f, indent=2)
         print(f"[NORMAL] Log saved: {filename}")
 
-    def wait(self):
-        for t in self.threads:
-            t.join()
+    def wait(self, duration):
+        time.sleep(duration)
+        self.stop()
 
 
 def main():
     src_ip = sys.argv[1] if len(sys.argv) > 1 else '10.0.0.1'
     dst_ip = sys.argv[2] if len(sys.argv) > 2 else '10.0.0.3'
     duration = int(sys.argv[3]) if len(sys.argv) > 3 else 60
+    log_dir = sys.argv[4] if len(sys.argv) > 4 else None
 
-    gen = NormalTrafficGenerator(src_ip, dst_ip)
+    gen = NormalTrafficGenerator(src_ip, dst_ip, log_dir=log_dir)
     signal.signal(signal.SIGINT, lambda s, f: (gen.stop(), gen.save_log(), sys.exit(0)))
 
     print(f"[NORMAL] Generating traffic: {src_ip} -> {dst_ip} for {duration}s")
     gen.start_all(duration=duration)
-    gen.wait()
+    gen.wait(duration)
     gen.save_log()
 
 

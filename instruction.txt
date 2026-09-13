@@ -1,0 +1,52 @@
+================================================================================
+ONE-CLICK DEMO INSTRUCTIONS (CORE WORKFLOW)
+AI-Driven, SDN-Enforced Continuous Trust Scoring for Zero Trust Networks
+================================================================================
+
+This project automates the entire Zero Trust lifecycle into a single execution 
+script. It automatically simulates legitimate traffic, launches an attack, 
+enforces real-time mitigation via SDN, and plots the AI's response.
+
+--------------------------------------------------------------------------------
+WORKFLOW SUMMARY (For your Professor)
+--------------------------------------------------------------------------------
+1. We boot an SDN Controller (Ryu) to monitor and manage all switch traffic.
+2. We boot an ML Policy Engine that continuously reads SDN stats and assigns Trust Scores.
+3. We spawn a Mininet topology (4 Hosts: 1 Server, 2 Employees, 1 Random Attacker).
+4. For 60 seconds, safe employees browse the web, while the attacker launches 
+   a multi-vector attack (e.g. port scan -> Low-Rate DoS).
+5. The Policy Engine detects the anomaly, instantly tanks the attacker's Trust Score, 
+   and commands the SDN Controller to deploy an OpenFlow BLOCK rule.
+6. The script cleans up and generates two visual graphs as proof.
+
+--------------------------------------------------------------------------------
+STEP 1: Run the One-Click Demo
+--------------------------------------------------------------------------------
+Make sure you are in the "zero_trust_sdn" directory.
+
+Command:
+./demo.sh
+
+(Note: It will ask for your sudo password to boot the Mininet network topology).
+
+--------------------------------------------------------------------------------
+STEP 2: Review the Terminal Scorecard
+--------------------------------------------------------------------------------
+Once the 60-second simulation finishes, the terminal will print out a clean 
+"FINAL TRUST SCORES SUMMARY". You can point to this in your demo to show that 
+the AI accurately dropped the attacker to a score of 0 (BLOCKED), while leaving 
+the innocent employees at a perfect 100 (SAFE).
+
+--------------------------------------------------------------------------------
+STEP 3: View the Visual Proof
+--------------------------------------------------------------------------------
+Open the generated images inside the `output/` folder:
+
+1. `output/multi_attack_detection_results.png`
+   Shows a deep dive into the Attacker's traffic rate vs. their plummeting Trust Score.
+
+2. `output/all_users_trust_scores.png`
+   Shows the entire network's real-time trust state, proving 0 false positives.
+
+3. The raw JSON logs of the traffic simulation are saved in `data/collected/` if 
+   you need to show the exact packets that triggered the ML engine.

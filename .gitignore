@@ -9,7 +9,15 @@ data/collected/
 data/processed/
 data/*.json
 *.log
+models/
 
 # OS / IDE
 .vscode/
 .DS_Store
+
+# AI Context & Meta-files (Hide from Professor)
+CLAUDE.md
+mistakes.md
+.claude/
+graphify-out/
+walkthrough.md

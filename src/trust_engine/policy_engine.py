@@ -55,10 +55,12 @@ class PolicyEngine:
         os.makedirs(self.data_dir, exist_ok=True)
 
     def initialize_model(self, training_data=None):
-        if training_data is not None:
+        if self.trust_scorer.load_model():
+            print("[POLICY] Loaded existing trust model from disk.")
+        elif training_data is not None:
             self.trust_scorer.train(training_data)
         else:
-            print("[POLICY] Generating synthetic baseline...")
+            print("[POLICY] No trained model found. Generating synthetic baseline...")
             synthetic = self.trust_scorer.generate_synthetic_training_data()
             self.trust_scorer.train(synthetic)
         print("[POLICY] Trust model initialized")

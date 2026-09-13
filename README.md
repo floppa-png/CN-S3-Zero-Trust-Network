@@ -47,13 +47,12 @@ real-time through an SDN controller.
 
 ### 1. Start the SDN Controller
 ```bash
-./venv/bin/ryu-manager src/sdn_controller/trust_controller.py \
-    --ofp-tcp-listen-port 6633 --wsapi-port 8080
+./venv/bin/python run_controller.py
 ```
 
 ### 2. Start the Mininet Topology (in another terminal)
 ```bash
-sudo ./venv/bin/python run_topology.py
+sudo python3 run_topology.py
 ```
 
 ### 3. Start the Policy Engine (in another terminal)

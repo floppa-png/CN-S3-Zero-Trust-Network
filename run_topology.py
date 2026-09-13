@@ -26,30 +26,51 @@ def run_automated(controller_ip='127.0.0.1', controller_port=6633):
     from mininet.log import info
     import time
     import random
+    import json
+    
+    # Create a unified timestamped folder for this specific run's logs
+    from datetime import datetime
+    run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(os.path.dirname(__file__), 'data', 'collected', run_timestamp)
+    os.makedirs(run_dir, exist_ok=True)
     
     # Shuffle hosts h1, h2, h4 to prove the attacker is not hardcoded
     all_hosts = [net.get('h1'), net.get('h2'), net.get('h4')]
     random.shuffle(all_hosts)
     normal1, normal2, attacker = all_hosts
     server = net.get('h3')
-    
+
+    # Save the assigned roles to a JSON file so plot_results.py knows how to label them
+    roles = {
+        normal1.IP(): f'{normal1.name} (Employee)',
+        normal2.IP(): f'{normal2.name} (Employee)',
+        attacker.IP(): f'{attacker.name} (Attacker)',
+        server.IP(): f'{server.name} (Server)'
+    }
+    with open(os.path.join(run_dir, 'roles.json'), 'w') as f:
+        json.dump(roles, f, indent=2)
+        
     info('\n*** Starting Server...\n')
     server.cmd('python3 -m http.server 80 &')
     time.sleep(1)
     
     info(f'\n*** Generating normal traffic ({normal1.name} and {normal2.name})...\n')
-    normal1.cmd(f'python3 src/traffic/normal_traffic.py {normal1.IP()} {server.IP()} 30 &')
-    normal2.cmd(f'python3 src/traffic/normal_traffic.py {normal2.IP()} {server.IP()} 30 &')
+    normal1.cmd(f'python3 src/traffic/normal_traffic.py {normal1.IP()} {server.IP()} 55 "{run_dir}" &')
+    normal2.cmd(f'python3 src/traffic/normal_traffic.py {normal2.IP()} {server.IP()} 55 "{run_dir}" &')
     
     info(f'\n*** Generating anomalous traffic (Attacker: {attacker.name})...\n')
-    attacker.cmd(f'python3 src/traffic/anomalous_traffic.py {attacker.IP()} {server.IP()} all 30')
+    attacker.cmd(f'python3 src/traffic/anomalous_traffic.py {attacker.IP()} {server.IP()} all 60 "{run_dir}"')
     
     info('\n*** Traffic generation complete. Stopping network...\n')
     try:
         server.cmd('kill %1 2>/dev/null; true')
     except Exception:
         pass  # Server process may already be dead
-    net.stop()
+        
+    try:
+        net.stop()
+    except Exception:
+        pass # Mininet often throws an AssertionError during aggressive teardown. We clean up via 'mn -c' later anyway.
 
 if __name__ == '__main__':
     import argparse

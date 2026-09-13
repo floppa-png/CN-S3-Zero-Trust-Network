@@ -24,32 +24,38 @@ ATTACK_PROFILES = {
     'port_scan': {
         'description': 'Sequential port scanning',
         'port_range': (1, 1024),
-        'interval': 0.05,  # Very fast scanning
+        'interval': lambda: random.uniform(0.001, 0.005),  # 200-1000 pps
         'duration': 30,
     },
     'data_exfiltration': {
         'description': 'Large data transfer to external host',
         'dst_port': 8443,
-        'packet_size': 65000,  # Max UDP payload
-        'interval': 0.01,
+        'packet_size': 65000,
+        'interval': lambda: random.uniform(0.001, 0.005), # 200-1000 pps
         'duration': 20,
     },
     'brute_force': {
         'description': 'Rapid SSH login attempts',
         'dst_port': 22,
-        'interval': 0.1,
+        'interval': lambda: random.uniform(0.002, 0.008), # 125-500 pps
         'duration': 15,
     },
     'lateral_movement': {
         'description': 'Slow, stealthy probing of multiple hosts',
         'ports': [22, 80, 443, 3389, 5900, 8080],
-        'interval_range': (5.0, 15.0),  # Slow to evade detection
+        'interval_range': (0.01, 0.05),  # Faster so it shows up in demo
         'duration': 60,
     },
     'session_hijack': {
         'description': 'Sudden behavior change mid-session',
-        'normal_duration': 15,  # Act normal first
-        'attack_duration': 15,  # Then switch to attack
+        'normal_duration': 15,
+        'attack_duration': 15,
+    },
+    'ldos_attack': {
+        'description': 'Low-Rate DoS: periodic high-bursts to evade average-rate detection',
+        'burst_duration': lambda: random.uniform(0.5, 1.5),
+        'quiet_duration': lambda: random.uniform(2.0, 4.0),
+        'dst_port': 80,
     },
 }
 
@@ -93,7 +99,8 @@ class AnomalousTrafficGenerator:
             except Exception:
                 pass
             port += 1
-            time.sleep(profile['interval'])
+            interval = profile['interval']() if callable(profile['interval']) else profile['interval']
+            time.sleep(interval)
 
         print(f"[ATTACK] Port scan complete (scanned to port {port})")
 
@@ -112,7 +119,8 @@ class AnomalousTrafficGenerator:
                 sock.close()
             except Exception:
                 pass
-            time.sleep(profile['interval'])
+            interval = profile['interval']() if callable(profile['interval']) else profile['interval']
+            time.sleep(interval)
 
         print(f"[ATTACK] Data exfiltration complete")
 
@@ -135,7 +143,8 @@ class AnomalousTrafficGenerator:
                 attempts += 1
             except Exception:
                 pass
-            time.sleep(profile['interval'])
+            interval = profile['interval']() if callable(profile['interval']) else profile['interval']
+            time.sleep(interval)
 
         print(f"[ATTACK] Brute force complete ({attempts} attempts)")
 
@@ -203,6 +212,39 @@ class AnomalousTrafficGenerator:
 
         print(f"[ATTACK] Session hijack complete")
 
+    def ldos_attack(self, duration=60):
+        """Low-Rate DoS: periodic bursts of traffic separated by long quiet periods."""
+        print(f"[ATTACK] LDoS attack: {self.src_ip} -> {self.dst_ip}")
+        profile = ATTACK_PROFILES['ldos_attack']
+        end_time = time.time() + duration
+        burst_dur = profile['burst_duration']() if callable(profile['burst_duration']) else profile['burst_duration']
+        quiet_dur = profile['quiet_duration']() if callable(profile['quiet_duration']) else profile['quiet_duration']
+        
+        while self.running and time.time() < end_time:
+            # Burst Phase
+            burst_end = time.time() + burst_dur
+            packets_sent = 0
+            while self.running and time.time() < burst_end and time.time() < end_time:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(0.1)
+                    sock.connect_ex((self.dst_ip, profile['dst_port']))
+                    sock.send(os.urandom(1024))
+                    sock.close()
+                    packets_sent += 1
+                except Exception:
+                    pass
+                time.sleep(0.01) # Send fast during burst
+            
+            self._log('ldos_burst', packets_sent, packets_sent * 1024, profile['dst_port'])
+            
+            # Quiet Phase
+            quiet_end = time.time() + quiet_dur
+            while self.running and time.time() < quiet_end and time.time() < end_time:
+                time.sleep(0.1) # Stay silent to drop the average rate
+                
+        print(f"[ATTACK] LDoS attack complete")
+
     def run_attack(self, attack_name, duration=None, **kwargs):
         """Run a specific attack profile."""
         attacks = {
@@ -211,6 +253,7 @@ class AnomalousTrafficGenerator:
             'brute_force': self.brute_force_ssh,
             'lateral_movement': self.lateral_movement,
             'session_hijack': self.session_hijack,
+            'ldos_attack': self.ldos_attack,
         }
         if attack_name not in attacks:
             print(f"Unknown attack: {attack_name}")
@@ -222,7 +265,7 @@ class AnomalousTrafficGenerator:
         """Run all attack profiles sequentially."""
         self.running = True
         attacks = ['port_scan', 'brute_force', 'data_exfiltration',
-                   'session_hijack', 'lateral_movement']
+                   'session_hijack', 'lateral_movement', 'ldos_attack']
         per_attack = duration // len(attacks)
         for name in attacks:
             if not self.running:
@@ -249,8 +292,9 @@ def main():
     dst_ip = sys.argv[2] if len(sys.argv) > 2 else '10.0.0.3'
     attack = sys.argv[3] if len(sys.argv) > 3 else 'all'
     duration = int(sys.argv[4]) if len(sys.argv) > 4 else 60
+    log_dir = sys.argv[5] if len(sys.argv) > 5 else None
 
-    gen = AnomalousTrafficGenerator(src_ip, dst_ip)
+    gen = AnomalousTrafficGenerator(src_ip, dst_ip, log_dir=log_dir)
     gen.running = True
     signal.signal(signal.SIGINT, lambda s, f: (gen.stop(), gen.save_log(), sys.exit(0)))
 
